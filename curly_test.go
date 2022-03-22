@@ -21,19 +21,36 @@ type Hello struct {
 }
 
 var curlyTests = []curlyTest{
-	curlyTest{
+	{
 		name:   "helloWorld",
 		format: "Hello, {Whom}",
 		value:  Hello{Whom: "World"},
 		expect: "Hello, World",
 		err:    "",
 	},
-	curlyTest{
+	{
 		name:   "greetingWorld",
 		format: "{Greeting}, {Whom}, how are you?",
 		value:  Hello{Greeting: "Hello", Whom: "World"},
 		expect: "Hello, World, how are you?",
 		err:    "",
+	},
+	{
+		name:   "indexed",
+		format: "test {0} test {1}!",
+		value:  []string{"hello", "world"},
+		expect: "test hello test world!",
+		err:    "",
+	},
+	{
+		name:   "str map",
+		format: "hello, {person.name}",
+		value: map[string]map[string]string{
+			"person": {
+				"name": "sean",
+			},
+		},
+		expect: "hello, sean",
 	},
 }
 

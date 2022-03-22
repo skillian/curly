@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -111,6 +112,22 @@ func getSelectors(source reflect.Type, path []string) ([]selector, error) {
 	}
 	selectors := make([]selector, len(path))
 	for i, p := range path {
+		if i64, err := strconv.ParseInt(p, 10, 64); err == nil {
+			switch source.Kind() {
+			case reflect.Array, reflect.Slice:
+				source = source.Elem()
+				selectors[i] = func(v interface{}) (interface{}, error) {
+					rv := reflect.ValueOf(v)
+					return rv.Index(int(i64)).Interface(), nil
+				}
+			default:
+				return nil, fmt.Errorf(
+					"expected int index into array or slice, "+
+						"not %v",
+					source,
+				)
+			}
+		}
 		if source.Kind() == reflect.Struct {
 			f, ok := source.FieldByNameFunc(func(name string) bool {
 				return strings.EqualFold(name, p)
@@ -123,6 +140,21 @@ func getSelectors(source reflect.Type, path []string) ([]selector, error) {
 				}
 				continue
 			}
+		}
+		if source.Kind() == reflect.Map {
+			key := reflect.ValueOf(p)
+			selectors[i] = func(v interface{}) (interface{}, error) {
+				rv := reflect.ValueOf(v)
+				rv = rv.MapIndex(key)
+				if !rv.IsValid() {
+					return nil, fmt.Errorf(
+						"failed to get %[1]T %[1]v[%[2]T %[2]v]",
+						v, key,
+					)
+				}
+				return rv.Interface(), nil
+			}
+			continue
 		}
 		methods := source.NumMethod()
 		for i := 0; i < methods; i++ {
